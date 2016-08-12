@@ -744,7 +744,8 @@ typedef enum PROTOCOL_choice {
     PROTO_XMPP,
     PROTO_XMPP_SERVER,
     PROTO_CONNECT,
-    PROTO_IRC
+    PROTO_IRC,
+    PROTO_PSQL
 } PROTOCOL_CHOICE;
 
 static const OPT_PAIR services[] = {
@@ -756,6 +757,7 @@ static const OPT_PAIR services[] = {
     {"xmpp-server", PROTO_XMPP_SERVER},
     {"telnet", PROTO_TELNET},
     {"irc", PROTO_IRC},
+    {"psql", PROTO_PSQL},
     {NULL, 0}
 };
 
@@ -1984,6 +1986,21 @@ int s_client_main(int argc, char **argv)
             /* Telnet server also sent the FOLLOWS sub-command */
             bytes = BIO_read(sbio, mbuf, BUFSIZZ);
             if (bytes != 6 || memcmp(mbuf, tls_follows, 6) != 0)
+                goto shut;
+        }
+        break;
+    case PROTO_PSQL:
+        {
+            static const unsigned char tls_do[] = {
+                0,0,0,8,4,210,22,47
+            };
+            int bytes;	
+	
+            /* Request PostgreSQL server start SSL */
+            BIO_write(sbio, tls_do, 8);
+            (void)BIO_flush(sbio);
+            bytes = BIO_read(sbio, mbuf, BUFSIZZ);
+            if ((bytes != 1) || (mbuf[0] != 'S'))
                 goto shut;
         }
         break;
